@@ -13,4 +13,4 @@ def tournament_select(population, fitnesses, tournament_size: int, rng: np.rando
             best_idx = idx
             best_fitness = fitnesses[idx]
 
-    return population[best_idx]
+    return population[best_idx]//返回一轮锦标赛的最佳个体

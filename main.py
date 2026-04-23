@@ -142,7 +142,7 @@ def main():
     parser.add_argument("--run-csv", type=str, default=None, help="Optional path for per-run summary CSV")
     args = parser.parse_args()
 
-    run_rows = []
+    run_rows = []//存每次运行的结果
     histories = []
 
     for run_id in range(args.runs):

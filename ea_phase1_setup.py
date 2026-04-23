@@ -4,9 +4,9 @@ from typing import Any
 import numpy as np
 from ioh import suite
 
-
+//配置中心
 @dataclass
-class EASetup:
+class EASetup://将参数打包成一个对象
     problem: Any
     rng: np.random.Generator
     dimension: int
@@ -41,20 +41,20 @@ def create_ea_setup(
     if budget < 2:
         raise ValueError("budget must be at least 2 for a population-based EA")
 
-    problem = load_problem(problem_id)
-    rng = np.random.default_rng(seed)
-    dimension = problem.meta_data.n_variables
+    problem = load_problem(problem_id)//加载问题实例
+    rng = np.random.default_rng(seed)//创建随机数生成器
+    dimension = problem.meta_data.n_variables//问题维度
 
     if one_prob is None:
         one_prob = default_one_prob(problem_id)
 
     if mutation_rate is None:
-        mutation_rate = 1.0 / dimension
+        mutation_rate = 1.0 / dimension//默认每个位发生变异的概率为1/dimension
 
-    pop_size = min(pop_size, budget)
-    tournament_size = max(2, min(tournament_size, pop_size))
-    elite_size = max(0, min(elite_size, pop_size - 1))
-    mutation_rate = max(0.0, min(1.0, mutation_rate))
+    pop_size = min(pop_size, budget)//种群大小不能超过预算
+    tournament_size = max(2, min(tournament_size, pop_size))//锦标赛选择的大小至少为2,不能超过种群大小
+    elite_size = max(0, min(elite_size, pop_size - 1))//精英数量至少为0,不能超过种群大小-1
+    mutation_rate = max(0.0, min(1.0, mutation_rate))//变异率在0和1之间
 
     return EASetup(
         problem=problem,
