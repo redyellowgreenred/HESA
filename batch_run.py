@@ -118,7 +118,7 @@ def main():
 
     for instance_index, problem_id in enumerate(problem_ids, start=1):
         family = get_problem_family(problem_id)
-        print(f"[{instance_index}/{total_instances}] problem_id={problem_id} family={family} started")
+        print(f"[{instance_index}/{total_instances}] problem_id={problem_id} family={family} started", flush=True)
 
         run_rows = []
         histories = []
@@ -160,6 +160,8 @@ def main():
             print(
                 f"  run={run_id} best={result['best_fitness']} "
                 f"final_mean={result['final_mean_fitness']:.3f} evals={result['evaluations']}"
+                ,
+                flush=True,
             )
 
         averaged_curve = average_histories(histories)
@@ -185,7 +187,8 @@ def main():
         print(
             f"[{instance_index}/{total_instances}] problem_id={problem_id} finished "
             f"avg_best={instance_row['average_best_fitness']:.3f} "
-            f"avg_final_mean={instance_row['average_final_mean_fitness']:.3f}"
+            f"avg_final_mean={instance_row['average_final_mean_fitness']:.3f}",
+            flush=True,
         )
 
     family_rows = summarize_family(instance_rows)
@@ -195,10 +198,10 @@ def main():
     write_csv_rows(str(output_dir / "instance_summary.csv"), instance_rows)
     write_csv_rows(str(output_dir / "family_summary.csv"), family_rows)
 
-    print(f"saved_all_runs={output_dir / 'all_runs.csv'}")
-    print(f"saved_instance_summary={output_dir / 'instance_summary.csv'}")
-    print(f"saved_family_summary={output_dir / 'family_summary.csv'}")
-    print(f"saved_curve_dir={curve_dir}")
+    print(f"saved_all_runs={output_dir / 'all_runs.csv'}", flush=True)
+    print(f"saved_instance_summary={output_dir / 'instance_summary.csv'}", flush=True)
+    print(f"saved_family_summary={output_dir / 'family_summary.csv'}", flush=True)
+    print(f"saved_curve_dir={curve_dir}", flush=True)
 
 
 if __name__ == "__main__":

@@ -30,20 +30,44 @@ def write_csv_rows(path: str, rows):
         writer.writerows(rows)
 
 
+def advance_history_to_evaluations(history, start_idx: int, evaluations: int):
+    """Move along one run history until the last point not exceeding the target evaluations."""
+    idx = start_idx
+    while idx + 1 < len(history) and history[idx + 1]["evaluations"] <= evaluations:
+        idx += 1
+    return idx
+
+
 def average_histories(histories):
-    """Average generation-wise progress across multiple runs."""
+    """Average progress across runs after aligning by evaluations with carry-forward."""
     if not histories:
         return []
 
-    max_length = max(len(history) for history in histories)
-    averaged = []
+    histories = [sorted(history, key=lambda row: row["evaluations"]) for history in histories]
+    min_common_evaluations = max(history[0]["evaluations"] for history in histories)
+    evaluation_grid = sorted(
+        {
+            row["evaluations"]
+            for history in histories
+            for row in history
+            if row["evaluations"] >= min_common_evaluations
+        }
+    )
 
-    for generation_idx in range(max_length):
-        points = [history[generation_idx] for history in histories if generation_idx < len(history)]
+    averaged = []
+    indices = [0] * len(histories)
+
+    for evaluations in evaluation_grid:
+        points = []
+        for history_idx, history in enumerate(histories):
+            indices[history_idx] = advance_history_to_evaluations(history, indices[history_idx], evaluations)
+            points.append(history[indices[history_idx]])
+
+        mean_generation = int(round(np.mean([point["generation"] for point in points])))
         averaged.append(
             {
-                "generation": points[0]["generation"],
-                "evaluations": points[0]["evaluations"],
+                "generation": mean_generation,
+                "evaluations": evaluations,
                 "mean_best_fitness": float(np.mean([point["best_fitness"] for point in points])),
                 "mean_population_fitness": float(np.mean([point["mean_fitness"] for point in points])),
             }
@@ -58,7 +82,7 @@ def build_run_result(
     dimension: int,
     best_x,
     best_y: float,
-    fitnesses,
+    final_mean_fitness: float,
     problem,
     generation: int,
     one_prob: float,
@@ -69,14 +93,14 @@ def build_run_result(
     elite_size: int,
     history,
 ):
-    """Build the final result dictionary returned by one EA run."""
+    """Build the final result dictionary returned by one solver run."""
     return {
         "problem_id": problem_id,
         "problem_name": problem_name,
         "dimension": dimension,
         "best_fitness": best_y,
         "best_solution": best_x,
-        "final_mean_fitness": float(np.mean(fitnesses)),
+        "final_mean_fitness": float(final_mean_fitness),
         "evaluations": problem.state.evaluations,
         "generations": generation,
         "one_prob": one_prob,

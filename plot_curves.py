@@ -71,19 +71,42 @@ def group_rows_by_family(rows):
     return grouped
 
 
+def advance_curve_to_evaluations(curve, start_idx: int, evaluations: int):
+    """Move along one averaged curve until the last point not exceeding the target evaluations."""
+    idx = start_idx
+    while idx + 1 < len(curve) and curve[idx + 1]["evaluations"] <= evaluations:
+        idx += 1
+    return idx
+
+
 def aggregate_family_curve(problem_curves):
     if not problem_curves:
         return []
 
-    max_len = max(len(curve) for curve in problem_curves)
-    aggregated = []
+    problem_curves = [sorted(curve, key=lambda row: row["evaluations"]) for curve in problem_curves]
+    min_common_evaluations = max(curve[0]["evaluations"] for curve in problem_curves)
+    evaluation_grid = sorted(
+        {
+            row["evaluations"]
+            for curve in problem_curves
+            for row in curve
+            if row["evaluations"] >= min_common_evaluations
+        }
+    )
 
-    for idx in range(max_len):
-        points = [curve[idx] for curve in problem_curves if idx < len(curve)]
+    aggregated = []
+    indices = [0] * len(problem_curves)
+
+    for evaluations in evaluation_grid:
+        points = []
+        for curve_idx, curve in enumerate(problem_curves):
+            indices[curve_idx] = advance_curve_to_evaluations(curve, indices[curve_idx], evaluations)
+            points.append(curve[indices[curve_idx]])
+
         aggregated.append(
             {
-                "generation": points[0]["generation"],
-                "evaluations": points[0]["evaluations"],
+                "generation": int(round(sum(point["generation"] for point in points) / len(points))),
+                "evaluations": evaluations,
                 "mean_best_fitness": sum(point["mean_best_fitness"] for point in points) / len(points),
                 "mean_population_fitness": sum(point["mean_population_fitness"] for point in points) / len(points),
             }
@@ -102,6 +125,15 @@ def ensure_output_dir(path: str):
     return output_dir
 
 
+def format_version_tag(version: int | None) -> str:
+    return f" (v{version})" if version is not None else ""
+
+
+def build_output_base(output_dir: Path, stem: str, version: int | None) -> Path:
+    suffix = f"_v{version}" if version is not None else ""
+    return output_dir / f"{stem}{suffix}"
+
+
 def configure_style():
     plt.style.use("seaborn-v0_8-whitegrid")
     plt.rcParams.update(
@@ -117,11 +149,33 @@ def configure_style():
     )
 
 
+def annotate_final_value(ax, rows, x_key: str, metric_key: str, color: str | None):
+    if not rows:
+        return
+
+    final_row = rows[-1]
+    final_x = final_row[x_key]
+    final_y = final_row[metric_key]
+    marker_color = color or "#333333"
+
+    ax.scatter([final_x], [final_y], color=marker_color, s=28, zorder=5)
+    ax.annotate(
+        f"Final = {final_y:.3f}",
+        xy=(final_x, final_y),
+        xytext=(8, 8),
+        textcoords="offset points",
+        fontsize=8.5,
+        color=marker_color,
+        bbox={"boxstyle": "round,pad=0.22", "facecolor": "white", "edgecolor": "#d9d9d9", "alpha": 0.95},
+    )
+
+
 def plot_metric_axis(ax, curves, x_key: str, metric_key: str, title: str, family_color: str):
     for label, rows, color, alpha, linewidth in curves:
         x_values = [row[x_key] for row in rows]
         y_values = [row[metric_key] for row in rows]
         ax.plot(x_values, y_values, label=label, color=color, alpha=alpha, linewidth=linewidth)
+        annotate_final_value(ax, rows, x_key, metric_key, color)
 
     ax.set_title(title)
     ax.set_xlabel("Evaluations" if x_key == "evaluations" else "Generations")
@@ -130,6 +184,7 @@ def plot_metric_axis(ax, curves, x_key: str, metric_key: str, title: str, family
     ax.grid(True, alpha=0.3)
     ax.set_facecolor("#fbfbfb")
     ax.title.set_color(family_color)
+    ax.legend(loc="best", frameon=True, facecolor="white", edgecolor="#dddddd")
 
 
 def save_figure(fig, output_base: Path, formats, dpi: int):
@@ -155,13 +210,22 @@ def build_family_curves(rows):
     return curves, family_average
 
 
-def plot_family_figure(family: str, rows, output_dir: Path, x_key: str, metric: str, formats, dpi: int):
+def plot_family_figure(
+    family: str,
+    rows,
+    output_dir: Path,
+    x_key: str,
+    metric: str,
+    formats,
+    dpi: int,
+    version: int | None,
+):
     family_color = FAMILY_COLORS.get(family, "#333333")
     _, family_average = build_family_curves(rows)
     metric_key = resolve_metric_key(rows, metric)
 
     fig, ax = plt.subplots(1, 1, figsize=(10.5, 5.8))
-    fig.suptitle(f"{family} Average Fitness Curve", fontsize=15, fontweight="bold")
+    fig.suptitle(f"{family} Average Fitness Curve{format_version_tag(version)}", fontsize=15, fontweight="bold")
 
     curves = [("Average Fitness", family_average, family_color, 1.0, 3.0)]
 
@@ -175,13 +239,22 @@ def plot_family_figure(family: str, rows, output_dir: Path, x_key: str, metric: 
     )
     ax.set_ylabel("Average Fitness")
 
-    output_base = output_dir / f"{sanitize_filename(family)}_curves"
+    output_base = build_output_base(output_dir, f"{sanitize_filename(family)}_curves", version)
     save_figure(fig, output_base, formats, dpi)
 
 
-def plot_single_problem_figure(problem_label: str, rows, output_dir: Path, x_key: str, metric: str, formats, dpi: int):
+def plot_single_problem_figure(
+    problem_label: str,
+    rows,
+    output_dir: Path,
+    x_key: str,
+    metric: str,
+    formats,
+    dpi: int,
+    version: int | None,
+):
     fig, ax = plt.subplots(1, 1, figsize=(9, 5.6))
-    fig.suptitle(f"{problem_label} Progress Curve", fontsize=15, fontweight="bold")
+    fig.suptitle(f"{problem_label} Progress Curve{format_version_tag(version)}", fontsize=15, fontweight="bold")
 
     line_color = "#1f77b4"
     curves = [(problem_label, rows, line_color, 0.95, 2.5)]
@@ -196,7 +269,7 @@ def plot_single_problem_figure(problem_label: str, rows, output_dir: Path, x_key
         family_color=line_color,
     )
 
-    output_base = output_dir / sanitize_filename(problem_label)
+    output_base = build_output_base(output_dir, sanitize_filename(problem_label), version)
     save_figure(fig, output_base, formats, dpi)
 
 
@@ -227,6 +300,12 @@ def main():
         help="Output formats, for example: --formats png svg pdf",
     )
     parser.add_argument("--dpi", type=int, default=220, help="DPI for raster outputs such as PNG")
+    parser.add_argument(
+        "--version",
+        type=int,
+        default=None,
+        help="Optional run version to append to figure titles and filenames",
+    )
     parser.add_argument(
         "--metric",
         choices=["best", "population"],
@@ -260,9 +339,18 @@ def main():
 
     if mode in {"family", "both"} and has_problem_id and has_family:
         for family, family_rows in sorted(group_rows_by_family(rows).items()):
-            plot_family_figure(family, family_rows, output_dir, args.x_axis, args.metric, args.formats, args.dpi)
+            plot_family_figure(
+                family,
+                family_rows,
+                output_dir,
+                args.x_axis,
+                args.metric,
+                args.formats,
+                args.dpi,
+                args.version,
+            )
             for fmt in args.formats:
-                generated.append(output_dir / f"{sanitize_filename(family)}_curves.{fmt}")
+                generated.append(build_output_base(output_dir, f"{sanitize_filename(family)}_curves", args.version).with_suffix(f".{fmt}"))
 
     if mode in {"problem", "both"}:
         grouped = group_rows_by_problem(rows)
@@ -270,9 +358,18 @@ def main():
             label = problem_rows[0].get("problem_name")
             if not label:
                 label = input_stem if problem_id == "single_problem" else str(problem_id)
-            plot_single_problem_figure(label, problem_rows, output_dir, args.x_axis, args.metric, args.formats, args.dpi)
+            plot_single_problem_figure(
+                label,
+                problem_rows,
+                output_dir,
+                args.x_axis,
+                args.metric,
+                args.formats,
+                args.dpi,
+                args.version,
+            )
             for fmt in args.formats:
-                generated.append(output_dir / f"{sanitize_filename(label)}.{fmt}")
+                generated.append(build_output_base(output_dir, sanitize_filename(label), args.version).with_suffix(f".{fmt}"))
 
     for path in generated:
         print(f"saved_plot={path}")
