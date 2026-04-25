@@ -25,6 +25,14 @@ MAXCUT_SA_INITIAL_TEMPERATURE_SCALE = 1.1
 MAXCUT_SA_FINAL_TEMPERATURE_RATIO = 5e-3
 MAXCUT_SA_MIN_TEMPERATURE = 1e-8
 MAXCUT_SA_HILL_CLIMBING_THRESHOLD_RATIO = 8e-2
+MAXCOVERAGE_REPAIR_SAMPLE_SIZE = 4
+
+
+def sample_candidate_indices(indices: list[int], sample_size: int, rng: np.random.Generator):
+    """Sample a small candidate subset without replacement."""
+    if len(indices) <= sample_size:
+        return indices[:]
+    return rng.choice(indices, size=sample_size, replace=False).tolist()
 
 
 def repair_maxcoverage_child(problem, child, fitness, violation, penalty, rng: np.random.Generator, budget: int):
@@ -42,11 +50,7 @@ def repair_maxcoverage_child(problem, child, fitness, violation, penalty, rng: n
         if not selected_indices:
             break
 
-        sample_size = min(4, len(selected_indices))
-        if len(selected_indices) == sample_size:
-            candidate_indices = selected_indices
-        else:
-            candidate_indices = rng.choice(selected_indices, size=sample_size, replace=False).tolist()
+        candidate_indices = sample_candidate_indices(selected_indices, MAXCOVERAGE_REPAIR_SAMPLE_SIZE, rng)
 
         best_candidate = None
         best_key = None
@@ -70,7 +74,6 @@ def repair_maxcoverage_child(problem, child, fitness, violation, penalty, rng: n
         repaired_child, repaired_fitness, repaired_violation, repaired_penalty = best_candidate
 
     return repaired_child, repaired_fitness, repaired_violation, repaired_penalty
-
 
 def flip_vertex(individual, vertex_idx: int):
     """Return a copy with one vertex moved to the opposite side of the cut."""
@@ -237,6 +240,8 @@ def run_binary_ea(
         n=setup.dimension,
         pop_size=setup.pop_size,
         one_prob=setup.one_prob,
+        repair_solution=repair_maxcoverage_child if is_maxcoverage_problem(setup.problem) else None,
+        repair_budget=budget,
     )
     prefer_feasible = is_maxcoverage_problem(setup.problem)
 
@@ -361,9 +366,14 @@ def main():
     parser.add_argument("--runs", type=int, default=10, help="How many independent runs to do")
     parser.add_argument("--seed", type=int, default=0, help="Base random seed")
     parser.add_argument("--one-prob", type=float, default=None, help="Probability of sampling bit 1 in initialization")
-    parser.add_argument("--pop-size", type=int, default=40, help="Population size")
-    parser.add_argument("--crossover-rate", type=float, default=0.9, help="Probability of applying uniform crossover")
-    parser.add_argument("--mutation-rate", type=float, default=None, help="Bit-wise mutation rate; default is 1/n")
+    parser.add_argument("--pop-size", type=int, default=2, help="Population size")
+    parser.add_argument("--crossover-rate", type=float, default=0.5, help="Probability of applying uniform crossover")
+    parser.add_argument(
+        "--mutation-rate",
+        type=float,
+        default=None,
+        help="Bit-wise mutation rate; default is 1/n",
+    )
     parser.add_argument("--tournament-size", type=int, default=2, help="Tournament size for parent selection")
     parser.add_argument("--elite-size", type=int, default=1, help="How many best individuals survive each generation")
     parser.add_argument("--curve-csv", type=str, default=None, help="Optional path for averaged progress curve CSV")

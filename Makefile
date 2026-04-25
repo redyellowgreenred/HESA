@@ -13,8 +13,8 @@ FAMILY ?= all
 BUDGET ?= 10000
 RUNS ?= 10
 SEED ?= 0
-POP_SIZE ?= 40
-CROSSOVER_RATE ?= 0.9
+POP_SIZE ?= 2
+CROSSOVER_RATE ?= 0.5
 MUTATION_RATE ?=
 ONE_PROB ?=
 TOURNAMENT_SIZE ?= 2
@@ -32,6 +32,7 @@ VERSION_KEY ?= $(LABEL)
 FORMAL_TRACK_KEY ?= $(LABEL)
 LATEST_LOG_FILE ?= results/latest_run.log
 LATEST_INFO_FILE ?= results/latest_run_info.txt
+LATEST_INSTANCE_RESULTS_FILE ?= results/latest_instance_final_results.md
 ARCHIVE_ROOT ?= $(PLOT_ARCHIVE_ROOT)
 ARCHIVE_DATA ?= 0
 FORMAL_RUN ?= 0
@@ -71,6 +72,7 @@ run:
 	current_info_file="$${tmp_data_dir}/run_info.txt"
 	mkdir -p results "$(ARCHIVE_ROOT)" "$(LATEST_PLOT_DIR)" "$(TMP_DATA_DIR)" "$(VERSION_STATE_DIR)"
 	rm -rf "$${tmp_data_dir}" "$(LATEST_PLOT_DIR)"
+	rm -f "$(LATEST_INSTANCE_RESULTS_FILE)"
 	mkdir -p "$${tmp_data_dir}" "$(LATEST_PLOT_DIR)"
 	version=1
 	if [[ -f "$${version_file}" ]]; then
@@ -81,8 +83,35 @@ run:
 	fi
 	archive_dir="$(ARCHIVE_ROOT)/$(LABEL)_v$${version}_$${run_id}"
 	run_summary_file="$${archive_dir}/run_summary.md"
+	instance_results_file="$${archive_dir}/instance_final_results.md"
 	mkdir -p "$${archive_dir}"
 	echo "Running experiment version v$${version}..."
+
+	{
+		echo "label=$(LABEL)"
+		echo "version=$${version}"
+		echo "run_id=$${run_id}"
+		echo "family=$(FAMILY)"
+		echo "budget=$(BUDGET)"
+		echo "runs=$(RUNS)"
+		echo "seed=$(SEED)"
+		echo "pop_size=$(POP_SIZE)"
+		echo "crossover_rate=$(CROSSOVER_RATE)"
+		echo "mutation_rate=$(if $(strip $(MUTATION_RATE)),$(MUTATION_RATE),default_1_over_n)"
+		echo "one_prob=$(if $(strip $(ONE_PROB)),$(ONE_PROB),default)"
+		echo "tournament_size=$(TOURNAMENT_SIZE)"
+		echo "elite_size=$(ELITE_SIZE)"
+		echo "x_axis=$(X_AXIS)"
+		echo "metric=$(METRIC)"
+		echo "formats=$(FORMATS)"
+		echo "latest_plot_dir=$(LATEST_PLOT_DIR)"
+		echo "archive_root=$(ARCHIVE_ROOT)"
+		echo "archive_dir=$${archive_dir}"
+		echo "formal_run=$(FORMAL_RUN)"
+		echo "formal_track_key=$(FORMAL_TRACK_KEY)"
+	} > "$${current_info_file}"
+
+	cp "$${current_info_file}" "$(LATEST_INFO_FILE)"
 
 	batch_cmd=( env PYTHONUNBUFFERED="$(PYTHON_UNBUFFERED)" "$(PYTHON)" batch_run.py \
 		--family "$(FAMILY)" \
@@ -117,36 +146,19 @@ run:
 			--x-axis "$(X_AXIS)" \
 			--mode family \
 			--metric "$(METRIC)"
+
+		env PYTHONUNBUFFERED="$(PYTHON_UNBUFFERED)" "$(PYTHON)" write_instance_markdown.py \
+			--run-info "$${current_info_file}" \
+			--input-csv "$${tmp_data_dir}/instance_summary.csv" \
+			--output "$${instance_results_file}" \
+			--track-key "$(FORMAL_TRACK_KEY)"
 	} | tee "$(LATEST_LOG_FILE)"
 
 	find "$${archive_dir}" -maxdepth 1 -type f \( -name '*.png' -o -name '*.svg' -o -name '*.pdf' \) -exec cp {} "$(LATEST_PLOT_DIR)/" \;
+	if [[ -f "$${instance_results_file}" ]]; then
+		cp "$${instance_results_file}" "$(LATEST_INSTANCE_RESULTS_FILE)"
+	fi
 	printf '%s\n' "$${version}" > "$${version_file}"
-
-	{
-		echo "label=$(LABEL)"
-		echo "version=$${version}"
-		echo "run_id=$${run_id}"
-		echo "family=$(FAMILY)"
-		echo "budget=$(BUDGET)"
-		echo "runs=$(RUNS)"
-		echo "seed=$(SEED)"
-		echo "pop_size=$(POP_SIZE)"
-		echo "crossover_rate=$(CROSSOVER_RATE)"
-		echo "mutation_rate=$(if $(strip $(MUTATION_RATE)),$(MUTATION_RATE),default_1_over_n)"
-		echo "one_prob=$(if $(strip $(ONE_PROB)),$(ONE_PROB),default)"
-		echo "tournament_size=$(TOURNAMENT_SIZE)"
-		echo "elite_size=$(ELITE_SIZE)"
-		echo "x_axis=$(X_AXIS)"
-		echo "metric=$(METRIC)"
-		echo "formats=$(FORMATS)"
-		echo "latest_plot_dir=$(LATEST_PLOT_DIR)"
-		echo "archive_root=$(ARCHIVE_ROOT)"
-		echo "archive_dir=$${archive_dir}"
-		echo "formal_run=$(FORMAL_RUN)"
-		echo "formal_track_key=$(FORMAL_TRACK_KEY)"
-	} > "$${current_info_file}"
-
-	cp "$${current_info_file}" "$(LATEST_INFO_FILE)"
 
 	if [[ "$(ARCHIVE_DATA)" == "1" ]]; then
 		mkdir -p "$${archive_dir}/batch_outputs"
@@ -213,6 +225,11 @@ show:
 		echo "Latest run info:"
 		cat "$(LATEST_INFO_FILE)"
 	fi
+	if [[ -f "$(LATEST_INSTANCE_RESULTS_FILE)" ]]; then
+		echo
+		echo "Latest instance results:"
+		echo "$(LATEST_INSTANCE_RESULTS_FILE)"
+	fi
 
 list-plots:
 	@set -euo pipefail
@@ -223,5 +240,5 @@ list-plots:
 	find "$(PLOT_ARCHIVE_ROOT)" -mindepth 1 -maxdepth 1 -type d | sort
 
 clean:
-	@rm -rf "$(TMP_DATA_DIR)" "$(LATEST_PLOT_DIR)" "$(PLOT_ARCHIVE_ROOT)" "$(LATEST_LOG_FILE)" "$(LATEST_INFO_FILE)" "results/.version_state" "$(FORMAL_STATE_ROOT)"
+	@rm -rf "$(TMP_DATA_DIR)" "$(LATEST_PLOT_DIR)" "$(PLOT_ARCHIVE_ROOT)" "$(LATEST_LOG_FILE)" "$(LATEST_INFO_FILE)" "$(LATEST_INSTANCE_RESULTS_FILE)" "results/.version_state" "$(FORMAL_STATE_ROOT)"
 	@echo "Cleaned generated results."

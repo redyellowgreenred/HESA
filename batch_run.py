@@ -92,9 +92,14 @@ def main():
     parser.add_argument("--runs", type=int, default=10, help="Independent runs per instance")
     parser.add_argument("--seed", type=int, default=0, help="Base random seed")
     parser.add_argument("--one-prob", type=float, default=None, help="Optional override for initialization bit probability")
-    parser.add_argument("--pop-size", type=int, default=40, help="Population size")
-    parser.add_argument("--crossover-rate", type=float, default=0.9, help="Probability of applying uniform crossover")
-    parser.add_argument("--mutation-rate", type=float, default=None, help="Bit-wise mutation rate; default is 1/n")
+    parser.add_argument("--pop-size", type=int, default=2, help="Population size")
+    parser.add_argument("--crossover-rate", type=float, default=0.5, help="Probability of applying uniform crossover")
+    parser.add_argument(
+        "--mutation-rate",
+        type=float,
+        default=None,
+        help="Bit-wise mutation rate; default is 1/n",
+    )
     parser.add_argument("--tournament-size", type=int, default=2, help="Tournament size for parent selection")
     parser.add_argument("--elite-size", type=int, default=1, help="How many best individuals survive each generation")
     parser.add_argument(

@@ -1,0 +1,1174 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>基于 IOH 的子模优化实验报告</title>
+  <style>
+    html {
+      color: #1a1a1a;
+      background-color: #fdfdfd;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        background-color: white;
+      }
+      body {
+        background-color: transparent;
+        color: black;
+        font-size: 12pt;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a {
+      color: #1a1a1a;
+    }
+    a:visited {
+      color: #1a1a1a;
+    }
+    img {
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid #e6e6e6;
+      color: #606060;
+    }
+    code {
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      background-color: #1a1a1a;
+      border: none;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid #1a1a1a;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    th {
+      border-top: 1px solid #1a1a1a;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  </style>
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">基于 IOH 的子模优化实验报告</h1>
+</header>
+<h1 id="基于-ioh-的子模优化实验报告">基于 IOH 的子模优化实验报告</h1>
+<h2 id="实验目标">1. 实验目标</h2>
+<p>本实验围绕 IOH 框架中的两类 0-1 子模优化问题展开：</p>
+<ul>
+<li><code>MaxCut</code>，问题编号为 <code>2000-2004</code></li>
+<li><code>MaxCoverage</code>，问题编号为 <code>2100-2127</code></li>
+</ul>
+<p>实验的直接目标有两层。第一层是完成课程要求中的基础演化算法实现，包括二进制编码、种群、自然选择、<code>bit-wise mutation</code>
+和 <code>uniform crossover</code>
+等基本组成。第二层是在统一实验框架下，对两类问题进行系统实验，记录每个实例上的最终结果，并结合平均
+fitness 曲线分析算法效果。</p>
+<p>这次工作的一个重要特点是：项目不是停留在“做出一版能跑的
+GA”之后就结束，而是在完整保留基础 EA
+实现的前提下，继续根据问题结构做了分流优化。我最终形成的方案是：</p>
+<ul>
+<li><code>MaxCoverage</code> 保留并强化了 binary EA 主线</li>
+<li><code>MaxCut</code> 在完成基础 EA
+实现后，正式结果改为更适合该问题的固定顺序 <code>1-flip</code> simulated
+annealing</li>
+</ul>
+<p>这份报告既覆盖基础 EA
+的实现要求，也真实反映了从统一基线到最终方案的探索过程。</p>
+<h2 id="从共享结构到问题分流">2. 从共享结构到问题分流</h2>
+<p>这次项目最开始坚持的思路是：能共享的部分先尽量共享，不急着一上来就把两类问题完全拆开。于是我先搭了一套统一的
+binary EA 框架，同时处理 <code>MaxCut</code> 和
+<code>MaxCoverage</code>。这一阶段已经具备了课程要求中的基本组成：</p>
+<ul>
+<li>0-1 向量表示解</li>
+<li>随机初始化</li>
+<li>tournament selection</li>
+<li>uniform crossover</li>
+<li>bit-wise mutation</li>
+<li>elitism</li>
+<li>固定 fitness evaluation budget</li>
+<li>多次独立运行后统计平均结果并出图</li>
+</ul>
+<p>这套共享结构的价值主要有两点。第一，它先把课程要求中的基础实验框架完整搭起来了。第二，它让后面的每一次修改都能放在同一条实验流程里比较，不会变成零散的小试验。</p>
+<p>但实验继续往下做以后，我逐渐发现：共享实验框架是对的，共享求解思路却不一定对。<code>MaxCut</code>
+和 <code>MaxCoverage</code>
+虽然都可以用二进制编码来表示解，但它们真正困难的地方并不一样。</p>
+<p>对 <code>MaxCoverage</code> 来说，最核心的问题是约束。很多解表面上
+fitness 不低，但其实并不可行。如果仍然只按 fitness
+排序，这些解会把种群方向带偏，连历史最优也可能被误导。所以后面的调整，主要都围绕“先把搜索尽量留在可行域附近”展开，包括：</p>
+<ul>
+<li>记录每个解的 <code>fitness</code>、<code>violation</code> 和
+<code>penalty</code></li>
+<li>比较解时优先保留可行解，而不是只看 fitness</li>
+<li>对明显不可行的初始解和子代做简单 repair</li>
+</ul>
+<p>对 <code>MaxCut</code>
+来说，问题则完全不同。它没有约束，所有二进制解都可以直接比较，因此没有必要花大量精力处理“可行还是不可行”。它更需要的是稳定的局部改进能力。后面的实验说明，如果继续围绕原来的
+population-GA 一直加机制，提升并不稳定；相比之下，改用固定顺序
+<code>1-flip</code> simulated annealing 后，结果更稳，曲线也更平滑。</p>
+<p>之所以最后选 <code>1-flip</code>，是因为它很符合 <code>MaxCut</code>
+本身的结构。对这个问题来说，一个二进制位就对应一个顶点被放在哪一侧，而把某一位翻转一次，本质上就是把一个顶点移到
+cut
+的另一边。这样的改动很小、很直接，而且它带来的收益也比较容易理解，因为真正受影响的主要是和这个顶点相连的边。换句话说，<code>MaxCut</code>
+很适合用“先看翻动一个点会不会更好”的局部搜索直觉来做。</p>
+<p>同时，<code>1-flip</code>
+也符合一个很自然的搜索想法：如果某次单点翻转能让 cut
+变大，就立即接受；如果暂时变差，也可以在前期以小概率接受，从而避免太早卡在局部最优。这正是
+simulated annealing
+的优势。它既保留了局部搜索简单直接的优点，又给了算法一定的跳出能力，所以最后比继续硬撑在统一的
+population-GA 上更合适。</p>
+<p>所以，项目最后保留下来的不是“一套算法解决所有问题”，而是“共享实验框架，但在求解器层面按问题分流”：</p>
+<ul>
+<li>共享的是编码方式、实验流程、统计方法和出图方式</li>
+<li>分流的是真正执行搜索的策略</li>
+</ul>
+<h3 id="遗憾的探索">遗憾的探索</h3>
+<p>这一过程中也有一些没有保留下来的尝试。它们最后没有成为正式方案，但并不是白做，因为正是这些失败，让我更快看清了问题的边界。</p>
+<p>在 <code>MaxCoverage</code> 上，我曾尝试把 <code>violation</code>
+直接乘一个权重，加到选择分数里，希望用一个统一分数同时处理“解有多好”和“解是否越界”。这个思路看起来很直接，但实际效果并不好：权重不容易调稳，而且会把一些本来有潜力的解也一起压下去。</p>
+<p>下面这张图是 <code>MaxCoverage</code>
+更早期、效果也更弱的一版正式归档结果，对应的预算同样是
+<code>10000</code>
+evaluations，可以看出当时这条思路还没有带来理想的提升效果。</p>
+<figure>
+<img
+src="results/final_plots/full-maxcoverage_v1_20260423_150518/maxcoverage_curves_v1.png"
+alt="MaxCoverage 早期试错图 1" />
+<figcaption aria-hidden="true">MaxCoverage 早期试错图 1</figcaption>
+</figure>
+<p>我也试过更贪心的约束感知初始化，希望在一开始就构造出更好的可行解。这个方向听起来合理，但它会增加初始化开销，还会削弱种群的多样性，结果是后续搜索反而不够灵活。</p>
+<p>另外，我还尝试过更激进的变异率、可行优先的父代选择，以及在 repair
+之后再接一小段局部搜索。这些改动单独看都有道理，但综合结果并不稳定，所以最后都撤回了。</p>
+<p>下面这张图对应 <code>MaxCoverage</code> 另一版没有被最终保留的
+<code>10000</code> evaluations
+正式结果。它代表的不是“完全没进步”，而是“试过以后发现还不够稳，也不够值得作为最终方案保留”。</p>
+<figure>
+<img
+src="results/final_plots/full-maxcoverage_v5_20260424_125027/maxcoverage_curves_v5.png"
+alt="MaxCoverage 早期试错图 2" />
+<figcaption aria-hidden="true">MaxCoverage 早期试错图 2</figcaption>
+</figure>
+<p>在 <code>MaxCut</code> 上，我也试过继续围绕 population-GA
+做增强，希望在不分流的前提下把效果继续推高。但多轮实验下来，这条线始终没有形成足够稳定的提升。此外，我还尝试过随机选择
+bit
+位进行翻转，希望用更随机的方式增加搜索范围，但效果并不好，提升不够稳定。最后保留下来的做法，反而是更简单也更贴合问题结构的固定顺序
+<code>1-flip</code>，也就是按固定顺序逐个尝试翻转顶点对应的 bit。</p>
+<p>下面这张图是 <code>MaxCut</code> 在固定顺序 <code>1-flip</code>
+完全定下来之前的一版 <code>10000</code> evaluations
+结果。它能说明，随机翻转或者邻域结构还没有完全理顺时，曲线表现并不如最终方案稳定。</p>
+<figure>
+<img
+src="results/final_plots/full-maxcut_v3_20260424_120701/maxcut_curves_v3.png"
+alt="MaxCut 早期试错图" />
+<figcaption aria-hidden="true">MaxCut 早期试错图</figcaption>
+</figure>
+<p>回头看，这一节最重要的收获不是某一次修改立刻成功，而是慢慢弄清楚了什么应该共享，什么必须分开。算法改进很少是一条笔直向前的路，更多时候是先尝试、再回退、再调整。进步其实就是走两步退一步的螺旋上升过程。</p>
+<h2 id="算法设计">3. 算法设计</h2>
+<h3 id="基础-ea-实现">3.1 基础 EA 实现</h3>
+<p>课程要求中的基础 EA 已经完整实现，主要设计如下。</p>
+<h4 id="解的表示">解的表示</h4>
+<p>每个候选解都用一个长度为 <code>n</code> 的 0-1
+向量表示。向量中的每一位都对应一个二元决策，这就是标准的 binary
+representation。</p>
+<h4 id="初始化">初始化</h4>
+<p>初始解按概率随机生成。也就是说，每一位都以 <code>one_prob</code>
+的概率取值为 <code>1</code>。</p>
+<h4 id="自然选择">自然选择</h4>
+<p>父代选择采用 tournament
+selection。每次从当前种群中随机抽取若干个体，选出其中更好的个体作为父代。生存者选择采用
+elitism，也就是每一代先保留当前最好的若干个体，再补充新生成的子代。</p>
+<h4 id="交叉与变异">交叉与变异</h4>
+<ul>
+<li>交叉算子采用 <code>uniform crossover</code></li>
+<li>变异算子采用 <code>bit-wise mutation</code></li>
+</ul>
+<p><code>uniform crossover</code> 对每一位独立决定来自父代 A 还是父代
+B；<code>bit-wise mutation</code> 则以 <code>p_m = 1/n</code>
+的默认概率独立翻转每一位。</p>
+<h4 id="停止条件">停止条件</h4>
+<p>实验采用固定 fitness evaluation
+budget，而不是固定迭代代数。因为不同问题、不同搜索策略下，每一代真正消耗的评估次数并不完全一样，用
+budget 作为统一标准会更方便公平比较。</p>
+<h3 id="maxcoverage-的最终方案">3.2 MaxCoverage 的最终方案</h3>
+<p><code>MaxCoverage</code> 的正式版本保留了 binary EA
+主线，但围绕可行性主要做了三点调整。</p>
+<p>第一，初始化采用按维度自适应的稀疏采样。因为 <code>MaxCoverage</code>
+的可行区域比较窄，如果初始解过密，算法一开始就很容易掉进重惩罚区。当前正式设置中：</p>
+<ul>
+<li><code>n = 450</code> 时，目标初始 <code>1</code> 的个数约为
+<code>4.5</code>，对应 <code>one_prob = 0.0100</code></li>
+<li><code>n = 595</code> 时，目标初始 <code>1</code> 的个数约为
+<code>4.0</code>，对应 <code>one_prob ≈ 0.00672</code></li>
+<li><code>n = 760</code> 时，目标初始 <code>1</code> 的个数约为
+<code>3.0</code>，对应 <code>one_prob ≈ 0.00395</code></li>
+</ul>
+<p>第二，比较规则从“只看 raw fitness”改成了
+<code>feasible-first</code>。也就是说：</p>
+<ul>
+<li>先判断一个解是否可行</li>
+<li>可行解优先于不可行解</li>
+<li>在可行解内部再比较 fitness</li>
+<li>在不可行解内部再参考 penalty 和 violation</li>
+</ul>
+<p>第三，对不可行解做轻量级
+repair。这个修复不是复杂的局部搜索，而是在已经取 <code>1</code>
+的位置里抽样若干候选位，尝试把其中某一位从 <code>1</code> 改成
+<code>0</code>，再根据同一套 <code>feasible-first</code>
+规则选出更好的修复版本。这个 repair
+既用于初始化阶段，也用于子代生成之后。</p>
+<p>除了这些和可行性直接相关的改动，<code>MaxCoverage</code>
+的种群规模也是我后期重点调过的一组参数。正式压缩实验里，我先把种群数量从
+<code>20</code> 调到
+<code>10</code>；在个人进一步调试时，我又继续往下试到
+<code>5</code>，感觉效果还在变好；最后再收缩到
+<code>2</code>，整体表现反而更集中，也更符合这个问题“把有限预算尽量集中在少量高质量搜索轨迹上”的直觉。</p>
+<p>后来我再去查相关文献时，也注意到 <code>(1+1) EA</code>
+这一类极小规模搜索在子模优化问题上是有不错表现的。这让我觉得，自己沿着
+<code>20 -&gt; 10 -&gt; 5 -&gt; 2</code>
+这样一路收缩种群的探索，实际上已经摸到了一个比较合理的方向。只是因为时间有限，我没有再继续沿着“是否进一步贴近
+<code>(1+1) EA</code>”这条线做更系统的扩展实验，所以最终方案和文献中的做法是接近，但并不完全相同。</p>
+<p>这一套设计的核心想法可以概括成一句话：对 <code>MaxCoverage</code>
+来说，先尽量把搜索放在可行域附近，再考虑怎样把 fitness 做高。</p>
+<h3 id="maxcut-的最终方案">3.3 MaxCut 的最终方案</h3>
+<p><code>MaxCut</code> 在项目早期也使用过统一的 binary GA，所以基础 EA
+要求在这个问题族上同样已经实现并验证过。但在最终正式版本中，<code>MaxCut</code>
+被分流到固定顺序 <code>1-flip</code> simulated annealing。</p>
+<p>这样做的原因很直接：<code>MaxCut</code>
+没有约束，问题的关键不在于“如何处理不可行解”，而在于“如何稳定地做局部改进，并在需要时跳出局部最优”。与其继续在
+population-GA 上不断加机制，不如采用更贴近它结构的单解搜索。</p>
+<p>正式版本中的 <code>MaxCut</code> 求解流程如下：</p>
+<ul>
+<li>从一个随机二进制解开始</li>
+<li>依次尝试翻转每个顶点对应的比特</li>
+<li>若邻域解更优则直接接受</li>
+<li>若邻域解更差，则在温度较高时按模拟退火准则以一定概率接受</li>
+<li>随温度下降，搜索逐渐从带随机性的探索转向近似爬山式改进</li>
+</ul>
+<p>这说明，项目最终采用的是“共享同一套实验框架，但在 solver
+层按问题分流”的思路。这种分流不是对基础 EA
+的否定，而是在完成基础实现以后，根据实验结果做出的更合适选择。</p>
+<h3 id="统计与出图方式">3.4 统计与出图方式</h3>
+<p>每个问题实例独立运行 <code>10</code> 次。由于不同 run
+的代数和评估次数不一定能一一对上，正式统计采用“按 evaluations 对齐，再
+carry-forward
+平均”的方式生成平均曲线。这样可以避免直接按代数下标平均带来的错位问题，让曲线更真实地反映固定预算下的整体表现。</p>
+<h2 id="代码实现">4. 代码实现</h2>
+<h3 id="为什么这样组织代码">4.1 为什么这样组织代码</h3>
+<p>在代码实现上，我没有把所有逻辑堆在一个长脚本里，而是从一开始就尽量按“职责”来拆。这样做的好处很直接：一方面，每一块代码只负责一件相对明确的事，读起来更清楚；另一方面，后面要改某个算法细节时，通常只需要改对应的一小块，而不容易把整条实验流程一起弄乱。</p>
+<p>这次项目里，真正经常变化的是求解策略，比如初始化该不该更稀疏、<code>MaxCoverage</code>
+要不要 repair、<code>MaxCut</code> 最后要不要从 GA
+分流出去。相对稳定的则是实验流程本身，比如加载实例、记录
+history、批量重复运行、汇总结果、出图。因此我的组织思路是：把容易变化的部分放在求解器和
+phase
+内部，把不太变化的部分留在统一实验框架里。这样后面即使算法改动比较大，整套实验管线也还能保持稳定。</p>
+<p>除了主体算法代码，我还借助 AI
+协助生成和整理了多份脚本，把运行、记录和出图串成了一条自动化流程。具体来说，我把
+<code>Makefile</code>、批量实验脚本和若干 Markdown
+记录工具组织到了一起，让自己可以一键运行正式组，也可以一键运行测试组；运行结束后，程序会自动完成批量求解、生成图片、保存结果，并把关键参数变化和实例结果记录下来。</p>
+<p>这样做带来的好处不只是省时间。因为每次实验都有对应的归档、图像和文字记录，所以我后面在回看某一版结果时，更容易知道“这一版改了什么、为什么改、结果变成了什么样”。这让开发、检索、测试和回溯都方便了很多，也让整个项目从“能跑”变成了“好维护、好比较、好复现”。</p>
+<h3 id="六阶段结构">4.2 六阶段结构</h3>
+<p>整个 binary EA 主体被我拆成了六个
+phase，这样代码结构和算法流程基本是一一对应的。</p>
+<p>第一阶段负责
+setup。这里主要完成问题实例加载、随机数种子设置、维度读取、默认参数整理，以及对一些参数做合法化处理。它对应的是“实验开始前先把问题和参数准备好”这一步。</p>
+<p>第二阶段负责
+population。这里处理二进制解的采样、初始种群生成、解的评估，以及当前最优个体的记录。对
+<code>MaxCoverage</code> 来说，这一层还顺带承接了初始化 repair
+和可行性信息维护，所以它对应的是“编码、初始化、评估、初始最优记录”这一整块算法思路。</p>
+<p>第三阶段负责 selection。这里专门实现父代选择，也就是 tournament
+selection。把它单独拆出来的好处是，后面如果我要改选择逻辑，不需要去动交叉、变异或者统计部分。</p>
+<p>第四阶段负责 variation。这里集中放交叉和变异，也就是
+<code>uniform crossover</code> 和
+<code>bit-wise mutation</code>。这样算法里“如何产生新个体”的部分就被单独隔离出来了，逻辑比较清楚。</p>
+<p>第五阶段负责 survival。这里处理生存者保留，也就是 elitism。到了
+<code>MaxCoverage</code> 的正式版本后，这一层又自然承接了
+<code>feasible-first</code>
+的排序规则，所以它对应的是“哪些个体应该留下来进入下一代”。</p>
+<p>第六阶段负责
+reporting。这里不再关心怎样搜索，而是专门负责停止判断、history
+记录、结果打包、CSV
+输出，以及多次运行后的平均统计。它直接对应实验报告里的结果汇总和曲线生成需求。</p>
+<p>这样拆下来以后，算法流程本身就和代码结构自然对齐了：setup、初始化、选择、变异、保留、记录，读代码时基本不用反复跳来跳去。</p>
+<p>如果从工程组织的角度再往下看，主要 Python
+文件和它们的职责关系也比较清楚：</p>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>主要文件</th>
+<th>主要作用</th>
+<th>对应的算法或实验思路</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>main.py</code></td>
+<td>单次求解入口，负责把各阶段串起来，并在 <code>MaxCut</code> 与
+<code>MaxCoverage</code> 之间分流</td>
+<td>主求解流程；<code>MaxCut</code> 的专门
+solver；<code>MaxCoverage</code> 的 repair 调度</td>
+</tr>
+<tr class="even">
+<td><code>ea_phase1_setup.py</code></td>
+<td>负责加载实例、读取维度、整理默认参数</td>
+<td>setup 阶段；默认初始化概率；默认变异率</td>
+</tr>
+<tr class="odd">
+<td><code>ea_phase2_population.py</code></td>
+<td>负责解采样、初始种群生成、评估、记录当前最优</td>
+<td>binary representation；初始化；可行性信息维护</td>
+</tr>
+<tr class="even">
+<td><code>ea_phase3_selection.py</code></td>
+<td>负责父代选择</td>
+<td>tournament selection</td>
+</tr>
+<tr class="odd">
+<td><code>ea_phase4_variation.py</code></td>
+<td>负责交叉与变异</td>
+<td><code>uniform crossover</code>；<code>bit-wise mutation</code></td>
+</tr>
+<tr class="even">
+<td><code>ea_phase5_survival.py</code></td>
+<td>负责保留进入下一代的个体</td>
+<td>elitism；<code>MaxCoverage</code> 的 <code>feasible-first</code>
+保留规则</td>
+</tr>
+<tr class="odd">
+<td><code>ea_phase6_reporting.py</code></td>
+<td>负责停止判断、history、结果打包和多次运行后的平均</td>
+<td>实验记录；结果汇总；曲线统计</td>
+</tr>
+<tr class="even">
+<td><code>batch_run.py</code></td>
+<td>负责批量跑所有实例并输出汇总结果</td>
+<td>正式组/测试组批量实验；实例级结果统计</td>
+</tr>
+<tr class="odd">
+<td><code>plot_curves.py</code></td>
+<td>负责从汇总数据生成曲线图</td>
+<td>平均 fitness 曲线；正式出图</td>
+</tr>
+<tr class="even">
+<td><code>record_formal_run.py</code></td>
+<td>负责记录正式版本参数变化</td>
+<td>版本归档；实验可追溯性</td>
+</tr>
+<tr class="odd">
+<td><code>write_instance_markdown.py</code></td>
+<td>负责把每个实例的最终结果整理成 Markdown</td>
+<td>报告附表；实例结果留档</td>
+</tr>
+</tbody>
+</table>
+<h3 id="maxcut-如何脱离主体框架">4.3 MaxCut 如何脱离主体框架</h3>
+<p><code>MaxCut</code> 最终没有继续留在 population-based EA
+主体里，而是分流到了固定顺序 <code>1-flip</code> simulated
+annealing。但这里我并没有把它完全写成另一套无关的程序，而是让它只在“真正执行搜索”的那一层分开，其他部分尽量继续复用原来的实验框架。</p>
+<p><code>MaxCut</code>
+虽然不再走“种群初始化、父代选择、交叉变异、生存者保留”这条主线，但它仍然共享：</p>
+<ul>
+<li>同样的实例加载方式</li>
+<li>同样的随机初始化入口</li>
+<li>同样的 fitness 评估接口</li>
+<li>同样的 history 记录格式</li>
+<li>同样的单次运行结果打包方式</li>
+<li>同样的批量实验、结果汇总和出图流程</li>
+</ul>
+<p>这样做的好处是，<code>MaxCut</code>
+虽然在算法上分流了，但在实验层面仍然和 <code>MaxCoverage</code>
+保持统一。</p>
+<h3 id="代码结构与算法思路的对应关系">4.4
+代码结构与算法思路的对应关系</h3>
+<ul>
+<li>二进制编码、随机初始化、初始种群生成，对应的是 population
+阶段。</li>
+<li>tournament selection，对应的是 selection 阶段。</li>
+<li><code>uniform crossover</code> 和
+<code>bit-wise mutation</code>，对应的是 variation 阶段。</li>
+<li>elitism 和 <code>MaxCoverage</code> 的 <code>feasible-first</code>
+保留规则，对应的是 survival 阶段。</li>
+<li><code>MaxCoverage</code> 的稀疏初始化、可行性判断和 repair，主要落在
+setup、population 和主调度逻辑之间。</li>
+<li><code>MaxCut</code> 的固定顺序 <code>1-flip</code> simulated
+annealing，则作为分流后的专门 solver 存在，但仍然接回统一的 reporting
+和批量实验流程。</li>
+<li>多次独立运行后的平均曲线、每个实例的最终结果汇总，以及报告所需的 CSV
+和图片输出，则集中落在 reporting 和批量实验部分。</li>
+</ul>
+<p>从可维护性的角度看，我觉得这套组织方式最重要的一点是：算法思路不是只写在报告里，而是能在代码结构里直接看出来。即使不先看完整个项目，也大致能从模块划分上看出“哪一块在解决什么问题”。这让后续修改、调试和扩展都容易很多。</p>
+<h2 id="实验设置">5. 实验设置</h2>
+<p>正式参数如下。</p>
+<table>
+<thead>
+<tr class="header">
+<th>项目</th>
+<th>设置</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>问题族</td>
+<td><code>MaxCut</code> + <code>MaxCoverage</code></td>
+</tr>
+<tr class="even">
+<td>总预算</td>
+<td>每个实例每次运行 <code>10000</code> 次 fitness evaluations</td>
+</tr>
+<tr class="odd">
+<td>重复次数</td>
+<td>每个实例 <code>10</code> 次独立运行</td>
+</tr>
+<tr class="even">
+<td>基础种群大小</td>
+<td><code>2</code></td>
+</tr>
+<tr class="odd">
+<td>交叉概率</td>
+<td><code>0.5</code></td>
+</tr>
+<tr class="even">
+<td>变异率</td>
+<td>默认 <code>1/n</code></td>
+</tr>
+<tr class="odd">
+<td>锦标赛大小</td>
+<td><code>2</code></td>
+</tr>
+<tr class="even">
+<td>精英个数</td>
+<td><code>1</code></td>
+</tr>
+<tr class="odd">
+<td>横轴</td>
+<td><code>evaluations</code></td>
+</tr>
+<tr class="even">
+<td>曲线纵轴</td>
+<td>average best fitness</td>
+</tr>
+<tr class="odd">
+<td><code>MaxCut</code> 初始化</td>
+<td><code>one_prob = 0.5</code></td>
+</tr>
+<tr class="even">
+<td><code>MaxCoverage</code> 初始化</td>
+<td>按维度自适应稀疏初始化</td>
+</tr>
+</tbody>
+</table>
+<p>这里需要补充说明一点：<code>MaxCut</code>
+的最终正式结果采用的是单解模拟退火，因此形式上保留的
+<code>pop_size</code>、<code>crossover_rate</code>、<code>mutation_rate</code>
+字段，主要是为了维持统一接口和实验记录；真正驱动搜索的，是固定顺序
+<code>1-flip</code> simulated annealing 本身。</p>
+<p>问题规模方面：</p>
+<ul>
+<li><code>MaxCut</code> 共 <code>5</code> 个实例，维度均为
+<code>800</code></li>
+<li><code>MaxCoverage</code> 共 <code>28</code> 个实例，维度分别为
+<code>450</code>、<code>595</code>、<code>760</code></li>
+</ul>
+<h2 id="结果与分析">6. 结果与分析</h2>
+<h3 id="曲线结果">6.1 曲线结果</h3>
+<p>两类问题的正式曲线如下：</p>
+<figure>
+<img
+src="results/final_plots/full_v3_20260425_091400/maxcut_curves_v3.png"
+alt="MaxCut 正式曲线" />
+<figcaption aria-hidden="true">MaxCut 正式曲线</figcaption>
+</figure>
+<figure>
+<img
+src="results/final_plots/full_v3_20260425_091400/maxcoverage_curves_v3.png"
+alt="MaxCoverage 正式曲线" />
+<figcaption aria-hidden="true">MaxCoverage 正式曲线</figcaption>
+</figure>
+<p>从曲线形状上看，<code>MaxCut</code>
+的提升过程比较平滑，前期上升较快，后期逐步趋稳，说明分流后的单解搜索在固定预算下表现比较稳定。相比之下，<code>MaxCoverage</code>
+的曲线虽然前期也能明显上升，但后期波动更大，这和它的可行区域较窄、不同实例难度差异明显有关。</p>
+<h3 id="整体表现">6.2 整体表现</h3>
+<p>按实例平均后的整体表现可以概括为：</p>
+<ul>
+<li><code>MaxCut</code> 的 <code>average_best_fitness</code> 实例均值为
+<code>11464.460</code></li>
+<li><code>MaxCoverage</code> 的 <code>average_best_fitness</code>
+实例均值为 <code>431.971</code></li>
+</ul>
+<p>对 <code>MaxCut</code>
+来说，五个实例之间的表现非常接近，说明最终方案比较稳定。其中：</p>
+<ul>
+<li>最好的是
+<code>2003</code>，<code>average_best_fitness = 11498.700</code></li>
+<li>相对最低的是
+<code>2002</code>，<code>average_best_fitness = 11446.600</code></li>
+</ul>
+<p>对 <code>MaxCoverage</code>
+来说，不同实例之间的差异明显更大。其中：</p>
+<ul>
+<li>最好的是
+<code>2103</code>，<code>average_best_fitness = 707.400</code></li>
+<li>相对最难的是
+<code>2125</code>，<code>average_best_fitness = 325.600</code></li>
+</ul>
+<p>另外，<code>MaxCoverage</code> 有 <code>4</code> 个实例的
+<code>average_final_mean_fitness</code> 为负，分别是
+<code>2108</code>、<code>2109</code>、<code>2110</code>、<code>2111</code>。这并不表示算法没有找到过好解，而是说明在这些更困难的实例上，运行结束时种群整体质量还不够稳定。</p>
+<p>把这两个指标放在一起看，可以更完整地说明 <code>MaxCoverage</code>
+的难点：好的个体可以找到，但想让整个种群长期稳定地停在高质量可行区域，仍然更难。</p>
+<h3 id="结果讨论">6.3 结果讨论</h3>
+<p>从这次实验可以得到两个比较清楚的结论。</p>
+<p>第一，统一的 binary EA
+是一个必要且有效的起点。它完成了课程要求中的核心实现，也给后续比较提供了统一框架。</p>
+<p>第二，问题结构会决定“基础 EA 之后该往哪里改”。对
+<code>MaxCoverage</code> 来说，关键是把可行性真正纳入搜索主逻辑，因此
+<code>feasible-first + repair + sparse initialization</code>
+是有效方向；对 <code>MaxCut</code>
+来说，关键是局部改进和跳出局部最优，因此最终转向 <code>1-flip</code>
+simulated annealing 更自然。</p>
+<p>也就是说，本实验最重要的收获是逐步确认了：</p>
+<ul>
+<li>哪些结构应该共享</li>
+<li>哪些部分必须按问题族分流</li>
+</ul>
+<h2 id="各问题实例最终结果">7. 各问题实例最终结果</h2>
+<h3 id="maxcut">7.1 MaxCut</h3>
+<table>
+<colgroup>
+<col style="width: 9%" />
+<col style="width: 9%" />
+<col style="width: 9%" />
+<col style="width: 9%" />
+<col style="width: 9%" />
+<col style="width: 9%" />
+<col style="width: 9%" />
+<col style="width: 9%" />
+<col style="width: 9%" />
+<col style="width: 9%" />
+<col style="width: 9%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Problem ID</th>
+<th>Problem Name</th>
+<th>n</th>
+<th>Runs</th>
+<th>Budget</th>
+<th>Avg Best</th>
+<th>Std Best</th>
+<th>Min Best</th>
+<th>Max Best</th>
+<th>Avg Final Mean</th>
+<th>Std Final Mean</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>2000</code></td>
+<td><code>MaxCut2000</code></td>
+<td><code>800</code></td>
+<td><code>10</code></td>
+<td><code>10000</code></td>
+<td><code>11451.900</code></td>
+<td><code>27.848</code></td>
+<td><code>11392</code></td>
+<td><code>11493</code></td>
+<td><code>11451.900</code></td>
+<td><code>27.848</code></td>
+</tr>
+<tr class="even">
+<td><code>2001</code></td>
+<td><code>MaxCut2001</code></td>
+<td><code>800</code></td>
+<td><code>10</code></td>
+<td><code>10000</code></td>
+<td><code>11462.300</code></td>
+<td><code>22.619</code></td>
+<td><code>11430</code></td>
+<td><code>11499</code></td>
+<td><code>11462.300</code></td>
+<td><code>22.619</code></td>
+</tr>
+<tr class="odd">
+<td><code>2002</code></td>
+<td><code>MaxCut2002</code></td>
+<td><code>800</code></td>
+<td><code>10</code></td>
+<td><code>10000</code></td>
+<td><code>11446.600</code></td>
+<td><code>40.158</code></td>
+<td><code>11407</code></td>
+<td><code>11519</code></td>
+<td><code>11446.600</code></td>
+<td><code>40.158</code></td>
+</tr>
+<tr class="even">
+<td><code>2003</code></td>
+<td><code>MaxCut2003</code></td>
+<td><code>800</code></td>
+<td><code>10</code></td>
+<td><code>10000</code></td>
+<td><code>11498.700</code></td>
+<td><code>33.209</code></td>
+<td><code>11445</code></td>
+<td><code>11559</code></td>
+<td><code>11498.700</code></td>
+<td><code>33.209</code></td>
+</tr>
+<tr class="odd">
+<td><code>2004</code></td>
+<td><code>MaxCut2004</code></td>
+<td><code>800</code></td>
+<td><code>10</code></td>
+<td><code>10000</code></td>
+<td><code>11462.800</code></td>
+<td><code>30.521</code></td>
+<td><code>11406</code></td>
+<td><code>11531</code></td>
+<td><code>11462.800</code></td>
+<td><code>30.521</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="maxcoverage">7.2 MaxCoverage</h3>
+<table>
+<colgroup>
+<col style="width: 9%" />
+<col style="width: 9%" />
+<col style="width: 9%" />
+<col style="width: 9%" />
+<col style="width: 9%" />
+<col style="width: 9%" />
+<col style="width: 9%" />
+<col style="width: 9%" />
+<col style="width: 9%" />
+<col style="width: 9%" />
+<col style="width: 9%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Problem ID</th>
+<th>Problem Name</th>
+<th>n</th>
+<th>Runs</th>
+<th>Budget</th>
+<th>Avg Best</th>
+<th>Std Best</th>
+<th>Min Best</th>
+<th>Max Best</th>
+<th>Avg Final Mean</th>
+<th>Std Final Mean</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>2100</code></td>
+<td><code>MaxCoverage2100</code></td>
+<td><code>450</code></td>
+<td><code>10</code></td>
+<td><code>10000</code></td>
+<td><code>436.300</code></td>
+<td><code>2.193</code></td>
+<td><code>433</code></td>
+<td><code>440</code></td>
+<td><code>388.850</code></td>
+<td><code>86.044</code></td>
+</tr>
+<tr class="even">
+<td><code>2101</code></td>
+<td><code>MaxCoverage2101</code></td>
+<td><code>450</code></td>
+<td><code>10</code></td>
+<td><code>10000</code></td>
+<td><code>438.100</code></td>
+<td><code>3.807</code></td>
+<td><code>432</code></td>
+<td><code>445</code></td>
+<td><code>326</code></td>
+<td><code>109.038</code></td>
+</tr>
+<tr class="odd">
+<td><code>2102</code></td>
+<td><code>MaxCoverage2102</code></td>
+<td><code>595</code></td>
+<td><code>10</code></td>
+<td><code>10000</code></td>
+<td><code>558.700</code></td>
+<td><code>6.357</code></td>
+<td><code>547</code></td>
+<td><code>570</code></td>
+<td><code>440.450</code></td>
+<td><code>131.992</code></td>
+</tr>
+<tr class="even">
+<td><code>2103</code></td>
+<td><code>MaxCoverage2103</code></td>
+<td><code>760</code></td>
+<td><code>10</code></td>
+<td><code>10000</code></td>
+<td><code>707.400</code></td>
+<td><code>5.696</code></td>
+<td><code>698</code></td>
+<td><code>716</code></td>
+<td><code>557.150</code></td>
+<td><code>168.208</code></td>
+</tr>
+<tr class="odd">
+<td><code>2104</code></td>
+<td><code>MaxCoverage2104</code></td>
+<td><code>450</code></td>
+<td><code>10</code></td>
+<td><code>10000</code></td>
+<td><code>364.600</code></td>
+<td><code>5.122</code></td>
+<td><code>357</code></td>
+<td><code>375</code></td>
+<td><code>274.050</code></td>
+<td><code>103.017</code></td>
+</tr>
+<tr class="even">
+<td><code>2105</code></td>
+<td><code>MaxCoverage2105</code></td>
+<td><code>450</code></td>
+<td><code>10</code></td>
+<td><code>10000</code></td>
+<td><code>365.100</code></td>
+<td><code>4.571</code></td>
+<td><code>359</code></td>
+<td><code>374</code></td>
+<td><code>288.200</code></td>
+<td><code>110.525</code></td>
+</tr>
+<tr class="odd">
+<td><code>2106</code></td>
+<td><code>MaxCoverage2106</code></td>
+<td><code>595</code></td>
+<td><code>10</code></td>
+<td><code>10000</code></td>
+<td><code>408.300</code></td>
+<td><code>3.407</code></td>
+<td><code>402</code></td>
+<td><code>415</code></td>
+<td><code>280.500</code></td>
+<td><code>120.105</code></td>
+</tr>
+<tr class="even">
+<td><code>2107</code></td>
+<td><code>MaxCoverage2107</code></td>
+<td><code>760</code></td>
+<td><code>10</code></td>
+<td><code>10000</code></td>
+<td><code>435.700</code></td>
+<td><code>3.770</code></td>
+<td><code>430</code></td>
+<td><code>441</code></td>
+<td><code>233.350</code></td>
+<td><code>136.303</code></td>
+</tr>
+<tr class="odd">
+<td><code>2108</code></td>
+<td><code>MaxCoverage2108</code></td>
+<td><code>450</code></td>
+<td><code>10</code></td>
+<td><code>10000</code></td>
+<td><code>395.900</code></td>
+<td><code>7.582</code></td>
+<td><code>380</code></td>
+<td><code>406</code></td>
+<td><code>-1640.900</code></td>
+<td><code>2762.207</code></td>
+</tr>
+<tr class="even">
+<td><code>2109</code></td>
+<td><code>MaxCoverage2109</code></td>
+<td><code>450</code></td>
+<td><code>10</code></td>
+<td><code>10000</code></td>
+<td><code>386.100</code></td>
+<td><code>5.243</code></td>
+<td><code>377</code></td>
+<td><code>393</code></td>
+<td><code>-2446.150</code></td>
+<td><code>2676.065</code></td>
+</tr>
+<tr class="odd">
+<td><code>2110</code></td>
+<td><code>MaxCoverage2110</code></td>
+<td><code>595</code></td>
+<td><code>10</code></td>
+<td><code>10000</code></td>
+<td><code>431.100</code></td>
+<td><code>7.556</code></td>
+<td><code>416</code></td>
+<td><code>443</code></td>
+<td><code>-3297.800</code></td>
+<td><code>4191.758</code></td>
+</tr>
+<tr class="even">
+<td><code>2111</code></td>
+<td><code>MaxCoverage2111</code></td>
+<td><code>760</code></td>
+<td><code>10</code></td>
+<td><code>10000</code></td>
+<td><code>431.200</code></td>
+<td><code>12.766</code></td>
+<td><code>397</code></td>
+<td><code>446</code></td>
+<td><code>-1398.950</code></td>
+<td><code>3709.334</code></td>
+</tr>
+<tr class="odd">
+<td><code>2112</code></td>
+<td><code>MaxCoverage2112</code></td>
+<td><code>450</code></td>
+<td><code>10</code></td>
+<td><code>10000</code></td>
+<td><code>406.100</code></td>
+<td><code>4.742</code></td>
+<td><code>400</code></td>
+<td><code>415</code></td>
+<td><code>321.495</code></td>
+<td><code>97.142</code></td>
+</tr>
+<tr class="even">
+<td><code>2113</code></td>
+<td><code>MaxCoverage2113</code></td>
+<td><code>450</code></td>
+<td><code>10</code></td>
+<td><code>10000</code></td>
+<td><code>409</code></td>
+<td><code>5.477</code></td>
+<td><code>401</code></td>
+<td><code>417</code></td>
+<td><code>304.753</code></td>
+<td><code>101.185</code></td>
+</tr>
+<tr class="odd">
+<td><code>2114</code></td>
+<td><code>MaxCoverage2114</code></td>
+<td><code>595</code></td>
+<td><code>10</code></td>
+<td><code>10000</code></td>
+<td><code>507.100</code></td>
+<td><code>5.088</code></td>
+<td><code>498</code></td>
+<td><code>515</code></td>
+<td><code>302.256</code></td>
+<td><code>97.768</code></td>
+</tr>
+<tr class="even">
+<td><code>2115</code></td>
+<td><code>MaxCoverage2115</code></td>
+<td><code>760</code></td>
+<td><code>10</code></td>
+<td><code>10000</code></td>
+<td><code>641</code></td>
+<td><code>5.441</code></td>
+<td><code>633</code></td>
+<td><code>652</code></td>
+<td><code>473.523</code></td>
+<td><code>154.102</code></td>
+</tr>
+<tr class="odd">
+<td><code>2116</code></td>
+<td><code>MaxCoverage2116</code></td>
+<td><code>450</code></td>
+<td><code>10</code></td>
+<td><code>10000</code></td>
+<td><code>334</code></td>
+<td><code>3.066</code></td>
+<td><code>329</code></td>
+<td><code>338</code></td>
+<td><code>192.768</code></td>
+<td><code>112.179</code></td>
+</tr>
+<tr class="even">
+<td><code>2117</code></td>
+<td><code>MaxCoverage2117</code></td>
+<td><code>450</code></td>
+<td><code>10</code></td>
+<td><code>10000</code></td>
+<td><code>335.600</code></td>
+<td><code>3.720</code></td>
+<td><code>331</code></td>
+<td><code>345</code></td>
+<td><code>252.499</code></td>
+<td><code>87.709</code></td>
+</tr>
+<tr class="odd">
+<td><code>2118</code></td>
+<td><code>MaxCoverage2118</code></td>
+<td><code>595</code></td>
+<td><code>10</code></td>
+<td><code>10000</code></td>
+<td><code>363.200</code></td>
+<td><code>5.016</code></td>
+<td><code>355</code></td>
+<td><code>373</code></td>
+<td><code>173.729</code></td>
+<td><code>98.664</code></td>
+</tr>
+<tr class="even">
+<td><code>2119</code></td>
+<td><code>MaxCoverage2119</code></td>
+<td><code>760</code></td>
+<td><code>10</code></td>
+<td><code>10000</code></td>
+<td><code>388.500</code></td>
+<td><code>4.031</code></td>
+<td><code>384</code></td>
+<td><code>396</code></td>
+<td><code>205.587</code></td>
+<td><code>122.390</code></td>
+</tr>
+<tr class="odd">
+<td><code>2120</code></td>
+<td><code>MaxCoverage2120</code></td>
+<td><code>450</code></td>
+<td><code>10</code></td>
+<td><code>10000</code></td>
+<td><code>406.100</code></td>
+<td><code>4.742</code></td>
+<td><code>400</code></td>
+<td><code>415</code></td>
+<td><code>321.375</code></td>
+<td><code>97.290</code></td>
+</tr>
+<tr class="even">
+<td><code>2121</code></td>
+<td><code>MaxCoverage2121</code></td>
+<td><code>450</code></td>
+<td><code>10</code></td>
+<td><code>10000</code></td>
+<td><code>409</code></td>
+<td><code>5.477</code></td>
+<td><code>401</code></td>
+<td><code>417</code></td>
+<td><code>304.598</code></td>
+<td><code>101.339</code></td>
+</tr>
+<tr class="odd">
+<td><code>2122</code></td>
+<td><code>MaxCoverage2122</code></td>
+<td><code>595</code></td>
+<td><code>10</code></td>
+<td><code>10000</code></td>
+<td><code>507.100</code></td>
+<td><code>5.088</code></td>
+<td><code>498</code></td>
+<td><code>515</code></td>
+<td><code>302.018</code></td>
+<td><code>97.886</code></td>
+</tr>
+<tr class="even">
+<td><code>2123</code></td>
+<td><code>MaxCoverage2123</code></td>
+<td><code>760</code></td>
+<td><code>10</code></td>
+<td><code>10000</code></td>
+<td><code>641</code></td>
+<td><code>5.441</code></td>
+<td><code>633</code></td>
+<td><code>652</code></td>
+<td><code>473.373</code></td>
+<td><code>154.252</code></td>
+</tr>
+<tr class="odd">
+<td><code>2124</code></td>
+<td><code>MaxCoverage2124</code></td>
+<td><code>450</code></td>
+<td><code>10</code></td>
+<td><code>10000</code></td>
+<td><code>326.900</code></td>
+<td><code>2.625</code></td>
+<td><code>321</code></td>
+<td><code>330</code></td>
+<td><code>242.882</code></td>
+<td><code>90.161</code></td>
+</tr>
+<tr class="even">
+<td><code>2125</code></td>
+<td><code>MaxCoverage2125</code></td>
+<td><code>450</code></td>
+<td><code>10</code></td>
+<td><code>10000</code></td>
+<td><code>325.600</code></td>
+<td><code>3.292</code></td>
+<td><code>322</code></td>
+<td><code>331</code></td>
+<td><code>174.483</code></td>
+<td><code>93.465</code></td>
+</tr>
+<tr class="odd">
+<td><code>2126</code></td>
+<td><code>MaxCoverage2126</code></td>
+<td><code>595</code></td>
+<td><code>10</code></td>
+<td><code>10000</code></td>
+<td><code>356.200</code></td>
+<td><code>3.458</code></td>
+<td><code>349</code></td>
+<td><code>361</code></td>
+<td><code>256.198</code></td>
+<td><code>104.806</code></td>
+</tr>
+<tr class="even">
+<td><code>2127</code></td>
+<td><code>MaxCoverage2127</code></td>
+<td><code>760</code></td>
+<td><code>10</code></td>
+<td><code>10000</code></td>
+<td><code>380.300</code></td>
+<td><code>3.494</code></td>
+<td><code>375</code></td>
+<td><code>387</code></td>
+<td><code>219.849</code></td>
+<td><code>127.295</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="结论">8. 结论</h2>
+<p>本实验已经完整实现并验证了课程要求中的基础演化算法框架，包括 binary
+representation、种群、自然选择、<code>uniform crossover</code> 和
+<code>bit-wise mutation</code>。在这个基础上，又通过多轮实验形成了更贴合问题结构的最终方案：</p>
+<ul>
+<li><code>MaxCoverage</code> 走向可行优先的 binary EA</li>
+<li><code>MaxCut</code> 走向固定顺序 <code>1-flip</code> simulated
+annealing</li>
+</ul>
+<p>从最终结果看，这种分流是合理的。<code>MaxCut</code>
+表现稳定，说明单解局部搜索更适合它的结构；<code>MaxCoverage</code>
+虽然仍然存在难实例和种群稳定性问题，但
+<code>feasible-first + repair + sparse initialization</code>
+已经明显比“只看 raw fitness 的统一 GA”更符合这个问题的约束特点。</p>
+<p>如果后续还要继续改进，最值得继续投入的方向依然是
+<code>MaxCoverage</code>，尤其是进一步提高困难实例上的终止种群质量，而不是只提升
+best-so-far 个体。</p>
+<h2 id="参考文献">9. 参考文献</h2>
+<ol type="1">
+<li>F. Neumann, A. Neumann, C. Qian, V. A. Do, J. de Nobel, D.
+Vermetten, S. S. Ahouei, F. Ye, H. Wang, T. Bäck. <em>Benchmarking
+Algorithms for Submodular Optimization Problems Using IOHProfiler</em>.
+CoRR abs/2302.01464, 2023.</li>
+</ol>
+</body>
+</html>

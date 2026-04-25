@@ -55,8 +55,16 @@ def solution_sort_key(fitness: float, violation: float, penalty: float, prefer_f
     return (fitness, penalty, -violation)
 
 
-def initialize_population(problem, rng: np.random.Generator, n: int, pop_size: int, one_prob: float):
-    """Create the initial population and record the initial best solution."""
+def initialize_population(
+    problem,
+    rng: np.random.Generator,
+    n: int,
+    pop_size: int,
+    one_prob: float,
+    repair_solution=None,
+    repair_budget: int | None = None,
+):
+    """Create the initial population, optionally repairing infeasible MaxCoverage samples."""
     prefer_feasible = is_maxcoverage_problem(problem)
     population = []
     fitnesses = []
@@ -64,8 +72,18 @@ def initialize_population(problem, rng: np.random.Generator, n: int, pop_size: i
     penalties = []
 
     for _ in range(pop_size):
+        if repair_budget is not None and problem.state.evaluations >= repair_budget:
+            break
+
         x = sample_random_solution(n, rng, one_prob)
         y, violation, penalty = evaluate_solution(problem, x)
+        if (
+            prefer_feasible
+            and repair_solution is not None
+            and repair_budget is not None
+            and not is_feasible_penalty(penalty)
+        ):
+            x, y, violation, penalty = repair_solution(problem, x, y, violation, penalty, rng, repair_budget)
         population.append(x)
         fitnesses.append(y)
         violations.append(violation)
